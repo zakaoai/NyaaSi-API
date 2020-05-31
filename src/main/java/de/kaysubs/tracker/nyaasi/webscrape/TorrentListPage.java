@@ -56,9 +56,13 @@ public class TorrentListPage implements Parser<TorrentPreview[]> {
         Elements links = cells[2].select("a");
         try {
             URL baseUrl = new URL(isSukebei ? "https://sukebei.nyaa.si" : "https://nyaa.si");
-            downloadLink = new URL(baseUrl, links.get(0).attr("href"));
-
-            magnetLink = new URI(links.get(1).attr("href"));
+            if (links.get(0).attr("href").contains("magnet")) {
+                downloadLink = null;
+                magnetLink = new URI(links.get(0).attr("href"));
+            } else {
+                downloadLink = new URL(baseUrl, links.get(0).attr("href"));
+                magnetLink = new URI(links.get(1).attr("href"));
+            }
         } catch (MalformedURLException e) {
             throw new WebScrapeException("Cannot parse download url");
         } catch (URISyntaxException e) {
