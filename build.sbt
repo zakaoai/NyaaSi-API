@@ -11,10 +11,9 @@ autoScalaLibrary := false // exclude scala-library from dependencies
 
 val httpClientVersion = "4.5.5"
 val jsoupVersion = "1.11.2"
-lazy val kaysubsCommons = RootProject(uri("https://github.com/kaysubs/kaysub-commons.git"))
-
-dependsOn(kaysubsCommons)
+resolvers += "jitpack" at "https://jitpack.io"
 
 libraryDependencies += "org.apache.httpcomponents" % "httpclient" % httpClientVersion
 libraryDependencies += "org.apache.httpcomponents" % "httpmime" % httpClientVersion
 libraryDependencies += "org.jsoup" % "jsoup" % jsoupVersion
+libraryDependencies += "com.github.kaysubs" % "kaysub-commons" % "e32027a9b6"
