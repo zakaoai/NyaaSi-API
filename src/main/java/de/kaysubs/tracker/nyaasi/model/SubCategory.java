@@ -1,6 +1,10 @@
 package de.kaysubs.tracker.nyaasi.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 public class SubCategory implements Category {
+
+    @JsonBackReference
     private final MainCategory mainCategory;
     private final String name;
     private final int id;

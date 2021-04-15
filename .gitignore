@@ -2,3 +2,5 @@
 /target
 *.class
 hs_err_*
+
+.idea/

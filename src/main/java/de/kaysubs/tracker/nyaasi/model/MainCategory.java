@@ -1,10 +1,14 @@
 package de.kaysubs.tracker.nyaasi.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import java.util.Arrays;
 
 public abstract class MainCategory implements Category {
 
     private final int id;
+
+    @JsonManagedReference
     private SubCategory[] subCategories;
 
     public MainCategory(int id) {
