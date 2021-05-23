@@ -13,20 +13,24 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Date;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class TorrentListPage implements Parser<TorrentPreview[]> {
 
     @Override
     public TorrentPreview[] parsePage(Document page, boolean isSukebei) {
-        return page.selectFirst("table.torrent-list")
-                .selectFirst("tbody")
-                .select("tr").stream()
-                .map(e -> parseTorrent(e, isSukebei))
-                .toArray(TorrentPreview[]::new);
+        return
+                Optional.ofNullable(page.
+                        selectFirst("table.torrent-list"))
+                        .map(element -> element.selectFirst("tbody"))
+                        .map(element -> element.select("tr"))
+                        .map(elements -> elements.stream())
+                        .orElse(Stream.empty())
+                        .map(e -> parseTorrent(e, isSukebei))
+                        .toArray(TorrentPreview[]::new);
     }
 
     private TorrentPreview parseTorrent(Element row, boolean isSukebei) {
