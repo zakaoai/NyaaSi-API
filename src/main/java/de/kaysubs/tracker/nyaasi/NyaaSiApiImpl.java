@@ -8,23 +8,27 @@ import de.kaysubs.tracker.nyaasi.model.SearchRequest;
 import de.kaysubs.tracker.nyaasi.model.Session;
 import de.kaysubs.tracker.nyaasi.model.TorrentInfo;
 import de.kaysubs.tracker.nyaasi.model.TorrentPreview;
-import de.kaysubs.tracker.nyaasi.webscrape.*;
-import org.apache.http.Consts;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.CookieStore;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.cookie.Cookie;
-import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.message.BasicNameValuePair;
+import de.kaysubs.tracker.nyaasi.webscrape.LoginCsrfTokenParser;
+import de.kaysubs.tracker.nyaasi.webscrape.Parser;
+import de.kaysubs.tracker.nyaasi.webscrape.TorrentInfoParser;
+import de.kaysubs.tracker.nyaasi.webscrape.TorrentListPage;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.cookie.BasicCookieStore;
+import org.apache.hc.client5.http.cookie.Cookie;
+import org.apache.hc.client5.http.cookie.CookieStore;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.apache.hc.core5.net.URIBuilder;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -54,14 +58,14 @@ public class NyaaSiApiImpl implements NyaaSiApi {
         return isSukebei;
     }
 
-    protected <T> T parsePage(HttpResponse response, Parser<T> parser) {
+    protected <T> T parsePage(ClassicHttpResponse response, Parser<T> parser) {
         Document page = Jsoup.parse(HttpUtil.readIntoString(response));
 
         try {
             return parser.parsePage(page, isSukebei);
-        } catch(NyaaSiException | HttpException e) {
+        } catch (NyaaSiException | HttpException e) {
             throw e;
-        } catch(Exception e) {
+        } catch (Exception e) {
             throw new WebScrapeException(e);
         }
     }
@@ -78,7 +82,7 @@ public class NyaaSiApiImpl implements NyaaSiApi {
                     builder.addParameter("q", term));
 
             request.getCategory().ifPresent(category -> {
-                if(category.isSukebei() != isSukebei)
+                if (category.isSukebei() != isSukebei)
                     throw new IllegalCategoryException();
 
                 builder.addParameter("c", category.getMainCategoryId() + "_" + category.getSubCategoryId());
@@ -107,12 +111,15 @@ public class NyaaSiApiImpl implements NyaaSiApi {
         HttpGet get = new HttpGet(uri);
         get.setConfig(HttpUtil.WITH_TIMEOUT);
 
-        HttpResponse response = HttpUtil.executeRequest(get);
-        int statusCode = response.getStatusLine().getStatusCode();
-        switch(statusCode) {
-            case 404: return new TorrentPreview[0];
-            case 200: return parsePage(response, new TorrentListPage());
-            default: throw new HttpErrorCodeException(statusCode);
+        ClassicHttpResponse response = (ClassicHttpResponse) HttpUtil.executeRequest(get);
+        int statusCode = response.getCode();
+        switch (statusCode) {
+            case 404:
+                return new TorrentPreview[0];
+            case 200:
+                return parsePage(response, new TorrentListPage());
+            default:
+                throw new HttpErrorCodeException(statusCode);
         }
     }
 
@@ -121,9 +128,9 @@ public class NyaaSiApiImpl implements NyaaSiApi {
         HttpGet get = new HttpGet("https://" + domain + "/view/" + torrentId);
         get.setConfig(HttpUtil.WITH_TIMEOUT);
 
-        HttpResponse response = HttpUtil.executeRequest(get);
+        ClassicHttpResponse response = (ClassicHttpResponse) HttpUtil.executeRequest(get);
 
-        if(response.getStatusLine().getStatusCode() == 404)
+        if (response.getCode() == 404)
             throw new NoSuchTorrentException(torrentId);
 
         return parsePage(response, new TorrentInfoParser());
@@ -133,7 +140,7 @@ public class NyaaSiApiImpl implements NyaaSiApi {
         HttpGet get = new HttpGet("https://" + domain + "/login");
         get.setConfig(HttpUtil.WITH_TIMEOUT);
 
-        HttpResponse response = HttpUtil.executeRequest(get, store);
+        ClassicHttpResponse response = (ClassicHttpResponse) HttpUtil.executeRequest(get, store);
         return parsePage(response, new LoginCsrfTokenParser());
     }
 
@@ -149,13 +156,13 @@ public class NyaaSiApiImpl implements NyaaSiApi {
         form.add(new BasicNameValuePair("csrf_token", csrfToken));
         form.add(new BasicNameValuePair("username", username));
         form.add(new BasicNameValuePair("password", password));
-        post.setEntity(new UrlEncodedFormEntity(form, Consts.UTF_8));
+        post.setEntity(new UrlEncodedFormEntity(form, StandardCharsets.UTF_8));
 
         HttpResponse response = HttpUtil.executeRequest(post, store);
         boolean didFail = Arrays.stream(response.getHeaders("Location"))
                 .anyMatch(e -> e.getValue().endsWith("/login"));
 
-        if(didFail) {
+        if (didFail) {
             throw new LoginException();
         } else {
             Session session = sessionFromCookies(store.getCookies());

@@ -1,7 +1,7 @@
 package de.kaysubs.tracker.nyaasi.model;
 
-import org.apache.http.cookie.Cookie;
-import org.apache.http.impl.cookie.BasicClientCookie;
+import org.apache.hc.client5.http.cookie.Cookie;
+import org.apache.hc.client5.http.impl.cookie.BasicClientCookie;
 
 public class Session {
 
